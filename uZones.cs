@@ -2,7 +2,7 @@
     =======================
     uZones by Tanese
     =======================
-    V1.1.13
+    V1.1.14
     =======================
     This is an extended zoning script that allows users to manage zones and nodes with a JSON configuration with commands. 
     It supports adding/removing zones and nodes, visualizing nodes and borders, and teleporting to specific nodes. 
@@ -302,5 +302,5 @@ function removeVisualizedNodes(zone) {
 
 event onLoad() {
     loadZonesFromConfig();
-    logger.log("uZones by Tanese V1.1.13 successfully loaded!");
+    logger.log("uZones by Tanese V1.1.14 successfully loaded!");
 }
