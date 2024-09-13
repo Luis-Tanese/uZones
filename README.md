@@ -1,6 +1,6 @@
 # uZones [![](https://img.shields.io/github/downloads/Luis-Tanese/uZones/total.svg)](https://github.com/Luis-Tanese/uZones/releases)
 
-**Version:** 1.1.13  
+**Version:** 1.1.14  
 **Author:** Tanese  
 
 ## Overview
