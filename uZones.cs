@@ -7,8 +7,31 @@
     This is an extended zoning script that allows users to manage zones and nodes with a JSON configuration with commands. 
     It supports adding/removing zones and nodes, visualizing nodes and borders, and teleporting to specific nodes. 
     The commands are intuitive and easy to use, and the state is saved in a JSON file.
-    You need atleast 3 nodes in a zones to make it work. You can have as many nodes as you want, tho I don't recommend since it can be laggy
+    You need atleast 3 nodes in a zones to make it work. You can have as many nodes as you want, tho I don't recommend since it can be laggy.
 
+    =======================================
+    Module Needed:
+    ========================================
+    - uScriptExtended by MolyiEZ: https://github.com/MolyiEZ/uScriptExtended/releases/tag/v1.6.8.0
+	
+    =======================
+    Setting up the Config:
+    =======================
+    Make a file called uZonesConfig.json and put it in the data folder
+    Folder path: .../servers/yourserver/uScript/data/
+
+    =======================
+    Implementation:
+    =======================
+    Simply follow the instruction below:
+
+    event onPlayerPositionUpdated(player){
+        if (player.getData("zone") == zoneName) { // zoneName is the name of the zone you want to implement and the same as the zone in the json file
+            // do something here (call a function or execute some code)
+        }
+    }
+
+    =======================
     Commands:
     =======================
     - /uzones add <node/zone> <zoneName> : Add a new zone or node (node is added at player's position).
@@ -98,13 +121,13 @@ event onPlayerPositionUpdated(player) {
     currentZone = checkPlayerZone(player);
     previousZone = player.getData("zone");
     if (currentZone != null and currentZone != previousZone) {
-        logger.log("{0} has entered zone: {1}".format(player.name, currentZone));
+        // logger.log("{0} has entered zone: {1}".format(player.name, currentZone));
         player.setData("zone", currentZone);
-        player.message("You entered {0}".format(currentZone), "green");
+        // player.message("You entered {0}".format(currentZone), "green");
     } else if (currentZone == null and previousZone != null) {
-        logger.log("{0} has left zone: {1}".format(player.name, previousZone));
+        // logger.log("{0} has left zone: {1}".format(player.name, previousZone));
         player.setData("zone", null);
-        player.message("You left {0}".format(previousZone), "red");
+        // player.message("You left {0}".format(previousZone), "red");
     }
 }
 
