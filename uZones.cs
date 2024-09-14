@@ -2,7 +2,7 @@
     =======================
     uZones by Tanese
     =======================
-    V1.2.0
+    V1.3.0
     =======================
     This is an extended zoning script that allows users to manage zones and nodes with a JSON configuration with commands. 
     More information can be found here: https://github.com/Luis-Tanese/uZones/wiki/Home.
@@ -10,7 +10,7 @@
 
 event onLoad() {
     loadZonesFromConfig();
-    logger.log("uZones by Tanese V1.2.0 successfully loaded!");
+    logger.log("uZones by Tanese V1.3.0 successfully loaded!");
 }
 
 configFilePath = "uZonesConfig.json";
@@ -30,8 +30,25 @@ function loadZonesFromConfig() {
         zones = [];
     } else {
         zones = deserialize(jsonData);
+        foreach (zone in zones) {
+            if (zone["nodes"].count >= 3) {
+                zone["isReady"] = true;
+            }
+        }
+        zones = filterZonesByReady(zones);
         convertNodesToVector3();
     }
+}
+
+
+function filterZonesByReady(zones) {
+    readyZones = [];
+    foreach (zone in zones) {
+        if (zone["isReady"] == true) {
+            readyZones.add(zone);
+        }
+    }
+    return readyZones;
 }
 
 function saveZonesToConfig() {
@@ -73,27 +90,54 @@ function isPointInZone(playerPos, zoneNodes) {
 
 function checkPlayerZone(player) {
     playerPos = player.position;
+    insideZones = [];
     foreach (zone in zones) {
-        if (isPointInZone(playerPos, zone["nodes"])) {
-            return zone["zoneName"];
+        if (zone["isReady"] == true and isPointInZone(playerPos, zone["nodes"])) {
+            insideZones.add(zone["zoneName"]);
         }
     }
-    return null;
+    return insideZones;
+}
+
+function getZonesEntered(currentZones, previousZones) {
+    enteredZones = [];
+    foreach (zone in currentZones) {
+        if (!previousZones.contains(zone)) {
+            enteredZones.add(zone);
+        }
+    }
+    return enteredZones;
+}
+
+function getZonesExited(currentZones, previousZones) {
+    exitedZones = [];
+    foreach (zone in previousZones) {
+        if (!currentZones.contains(zone)) {
+            exitedZones.add(zone);
+        }
+    }
+    return exitedZones;
 }
 
 event onPlayerPositionUpdated(player) {
-    currentZone = checkPlayerZone(player);
-    previousZone = player.getData("zone");
-    if (currentZone != null and currentZone != previousZone) {
-        logger.log("{0} has entered zone: {1}".format(player.name, currentZone));
-        player.setData("zone", currentZone);
-        player.message("You entered {0}".format(currentZone), "green");
-    } else if (currentZone == null and previousZone != null) {
-        logger.log("{0} has left zone: {1}".format(player.name, previousZone));
-        player.setData("zone", null);
-        player.message("You left {0}".format(previousZone), "red");
+    currentZones = checkPlayerZone(player);
+    previousZones = player.getData("zone");
+    if (previousZones == null) {
+        previousZones = [];
     }
+    enteredZones = getZonesEntered(currentZones, previousZones);
+    exitedZones = getZonesExited(currentZones, previousZones);
+    foreach (zone in enteredZones) {
+        logger.log("{0} has entered zone: {1}".format(player.name, zone));
+        player.message("You entered {0}".format(zone), "green");
+    }
+    foreach (zone in exitedZones) {
+        logger.log("{0} has left zone: {1}".format(player.name, zone));
+        player.message("You left {0}".format(zone), "red");
+    }
+    player.setData("zone", currentZones);
 }
+
 
 function convertNodesToVector3() {
     foreach (zone in zones) {
@@ -151,6 +195,12 @@ command uzones() {
                 return;
             }
             handleVisualize(player, arguments[1], arguments[2], arguments[3]);
+        } else if (action == "json") {
+            if (arguments[1] != "refresh") {
+                player.message("Error: Missing refresh argument.", "red");
+                return;
+            }
+            loadZonesFromConfig();
         } else {
             player.message("Error: Unknown action.", "red");
         }
@@ -164,9 +214,9 @@ function handleAdd(player, type, zoneName, flag) {
             player.message("Zone already exists!", "red");
             return;
         }
-        zones.add({ "zoneName": zoneName, "nodes": [] });
+        zones.add({ "zoneName": zoneName, "nodes": [], "isReady": false });
         saveZonesToConfig();
-        player.message("Zone {0} added.".format(zoneName), "green");
+        player.message("Zone {0} added. Add atleast 3 nodes for the zone to be ready.".format(zoneName), "green");
     } else if (type == "node") {
         if (zone == null) {
             player.message("Zone not found!", "red");
@@ -178,8 +228,13 @@ function handleAdd(player, type, zoneName, flag) {
             "y": position.y,
             "z": position.z
         });
+        if (zone["nodes"].count >= 3 and zone["isReady"] == false) {
+            zone["isReady"] = true;
+            player.message("Zone {0} is now ready.".format(zoneName), "green");
+        }
         saveZonesToConfig();
         player.message("Node added to zone {0}.".format(zoneName), "green");
+    }
     } else if (type == "flag") {
         if (zone == null) {
             player.message("Zone not found!", "red");
@@ -382,87 +437,158 @@ function isValidFlag(flag) {
 }
 
 function zoneHasFlag(player, flag) {
-    zoneName = player.getData("zone");
-    zone = getZoneByName(zoneName);
+    zonesPlayerIsIn = player.getData("zone");
+    if (zonesPlayerisIn == null) {
+        zonesPlayerIsIn  = [];
+    }
     womp = false;
-    if (zone != null and zone.containsKey("flags") and zone["flags"].contains(flag)) {
-        womp = true;
+    foreach (zoneName in zonesPlayerIsIn) {
+        zone = getZoneByName(zoneName);
+        if (zone != null and zone.containsKey("flags") and zone["flags"].contains(flag)) {
+            womp = true;
+            break;
+        }
     }
     return womp;
 }
 
+
 event onBarricadeBuild(player, id, position, cancel) {
-    if (zoneHasFlag(player, "nobuild")) {
+    if (zoneHasFlag(player, "nobuild") and !hasOverridePermission(player, "nobuild")) {
+        cancel = true;
+    }
+}
+
+event onPlayerCrafted(player, itemId, cancel) {
+    if (zoneHasFlag(player, "nocraft") and !hasOverridePermission(player, "nocraft")) {
+        cancel = true;
+    }
+}
+
+event onPlayerDamaged(victim, killer, cancel, damage, cause, limb) {
+    if (zoneHasFlag(victim, "nodamage") and !hasOverridePermission(victim, "nodamage")) {
+        cancel = true;
+    }
+}
+
+event onStructureBuild(player, id, position, cancel) {
+    if (zoneHasFlag(player, "nobuild") and !hasOverridePermission(player, "nobuild")) {
+        cancel = true;
+    }
+}
+
+event onPlayerTakingItem(player, itemId, cancel) {
+    if (zoneHasFlag(player, "noitemtake") and !hasOverridePermission(player, "noitemtake")) {
+        cancel = true;
+    }
+}
+
+event onVehicleCarjack(player, vehicle, force, torque, cancel) {
+    if (zoneHasFlag(player, "nocarjack") and !hasOverridePermission(player, "nocarjack")) {
+        cancel = true;
+    }
+}
+
+event onSiphonVehicleRequest(player, vehicle, amount, cancel) {
+    if (zoneHasFlag(player, "nosiphon") and !hasOverridePermission(player, "nosiphon")) {
+        cancel = true;
+    }
+}
+
+event onVehicleHook(player, vehicle, vehicleHooked, cancel) {
+    if (zoneHasFlag(player, "nohook") and !hasOverridePermission(player, "nohook")) {
+        cancel = true;
+    }
+}
+
+event onVehicleLockpick(player, vehicle, cancel) {
+    if (zoneHasFlag(player, "nolockpick") and !hasOverridePermission(player, "nolockpick")) {
+        cancel = true;
+    }
+}
+
+event onVehicleTireDamaged(player, vehicle, cause, cancel) {
+    if (zoneHasFlag(player, "novehicledamage") and !hasOverridePermission(player, "novehicledamage")) {
         cancel = true;
     }
 }
 
 event onBarricadeDamaged(player, barricade, damage, cause, cancel) {
     if (player != null) {
-        if (zoneHasFlag(player, "noraid")) {
+        if (zoneHasFlag(player, "noraid") && !hasOverridePermission(player, "noraid")) {
             cancel = true;
+        }
+    } else {
+        objectZones = isObjectInZone(barricade.position);
+        foreach (zoneName in objectZones) {
+            if (zoneHasFlagForZone(zoneName, "noraid")) {
+                cancel = true;
+                break;
+            }
         }
     }
 }
 
-event onPlayerCrafted(player, itemId, cancel) {
-    if (zoneHasFlag(player, "nocraft")) {
-        cancel = true;
-    }
-}
-event onPlayerDamaged(victim, killer, cancel, damage, cause, limb) {
-    if (killer != null) {
-        if (zoneHasFlag(victim, "nodamage")) {
-            cancel = true;
-        }
-    }
-}
-event onStructureBuild(player, id, position, cancel) {
-    if (zoneHasFlag(player, "nobuild")) {
-        cancel = true;
-    }
-}
 event onStructureDamaged(player, structure, damage, cause, cancel) {
     if (player != null) {
-        if (zoneHasFlag(player, "noraid")) {
+        if (zoneHasFlag(player, "noraid") && !hasOverridePermission(player, "noraid")) {
             cancel = true;
+        }
+    } else {
+        objectZones = isObjectInZone(structure.position);
+        foreach (zoneName in objectZones) {
+            if (zoneHasFlagForZone(zoneName, "noraid")) {
+                cancel = true;
+                break;
+            }
         }
     }
 }
-event onVehicleDamaged(vehicle, player, cause, damage, cancel){
+
+event onVehicleDamaged(vehicle, player, cause, damage, cancel) {
     if (player != null) {
-        if (zoneHasFlag(player, "novehicledamage")) {
+        if (zoneHasFlag(player, "novehicledamage") && !hasOverridePermission(player, "novehicledamage")) {
             cancel = true;
+        }
+    } else {
+        objectZones = isObjectInZone(vehicle.position);
+        foreach (zoneName in objectZones) {
+            if (zoneHasFlagForZone(zoneName, "novehicledamage")) {
+                cancel = true;
+                break;
+            }
         }
     }
 }
-event onPlayerTakingItem(player, itemId, cancel){
-    if (zoneHasFlag(player, "noitemtake")) {
-        cancel = true;
+
+function filterArray(array, predicate) {
+    result = [];
+    foreach (item in array) {
+        if (predicate(item)) {
+            result.add(item);
+        }
     }
+    return result;
 }
-event onVehicleCarjack(player, vehicle, force, torque, cancel){
-    if (zoneHasFlag(player, "nocarjack")) {
-        cancel = true;
-    }
+
+function hasOverridePermission(player, flag) {
+    return player.hasPermission("uZones.override." + flag);
 }
-event onSiphonVehicleRequest(player, vehicle, amount, cancel){
-    if (zoneHasFlag(player, "nosiphon")) {
-        cancel = true;
+
+function isObjectInZone(position) {
+    insideZones = [];
+    foreach (zone in zones) {
+        if (zone["isReady"] == true and isPointInZone(position, zone["nodes"])) {
+            insideZones.add(zone["zoneName"]);
+        }
     }
+    return insideZones;
 }
-event onVehicleHook(player, vehicle, vehicleHooked, cancel){
-    if (zoneHasFlag(player, "nohook")) {
-        cancel = true;
+
+function zoneHasFlagForZone(zoneName, flag) {
+    zone = getZoneByName(zoneName);
+    if (zone != null and zone.containsKey("flags") and zone["flags"].contains(flag)) {
+        return true;
     }
-}
-event onVehicleLockpick(player, vehicle, cancel){
-    if (zoneHasFlag(player, "nolockpick")) {
-        cancel = true;
-    }
-}
-event onVehicleTireDamaged(player, vehicle, cause, cancel){
-    if (zoneHasFlag(player, "novehicledamage")) {
-        cancel = true;
-    }
+    return false;
 }
