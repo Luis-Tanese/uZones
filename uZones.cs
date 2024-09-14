@@ -515,7 +515,7 @@ event onVehicleTireDamaged(player, vehicle, cause, cancel) {
 
 event onBarricadeDamaged(player, barricade, damage, cause, cancel) {
     if (player != null) {
-        if (zoneHasFlag(player, "noraid") && !hasOverridePermission(player, "noraid")) {
+        if (zoneHasFlag(player, "noraid") and !hasOverridePermission(player, "noraid")) {
             cancel = true;
         }
     } else {
@@ -531,7 +531,7 @@ event onBarricadeDamaged(player, barricade, damage, cause, cancel) {
 
 event onStructureDamaged(player, structure, damage, cause, cancel) {
     if (player != null) {
-        if (zoneHasFlag(player, "noraid") && !hasOverridePermission(player, "noraid")) {
+        if (zoneHasFlag(player, "noraid") and !hasOverridePermission(player, "noraid")) {
             cancel = true;
         }
     } else {
@@ -547,7 +547,7 @@ event onStructureDamaged(player, structure, damage, cause, cancel) {
 
 event onVehicleDamaged(vehicle, player, cause, damage, cancel) {
     if (player != null) {
-        if (zoneHasFlag(player, "novehicledamage") && !hasOverridePermission(player, "novehicledamage")) {
+        if (zoneHasFlag(player, "novehicledamage") and !hasOverridePermission(player, "novehicledamage")) {
             cancel = true;
         }
     } else {
