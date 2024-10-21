@@ -7,6 +7,12 @@
 ## Wiki
 
 Wiki can be found [here](https://github.com/Luis-Tanese/uZones/wiki/Home).
+<br>
+**WIKI IS GOING THROUGH THE PROCESS OF UPDATING IT, SO IT MIGHT HAVE STUFF NOT YET IMPLEMENTED IN THE RELEASE.**
+<br>
+**Currently only the homepage has been updated to the new version the rest should be fine.**
+<br>
+**If you have any questions please dm me in Discord @ tanese.**
 
 ## Overview
 
